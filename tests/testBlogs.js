@@ -71,4 +71,22 @@ const likesIsWrongTypeBlog = [
   },
 ];
 
-module.exports = { blogs, listWithOneBlog, likesIsWrongTypeBlog };
+const testBlog = {
+  title: 'Go To Statement Considered Harmful',
+  author: 'Edsger W. Dijkstra',
+  likes: 5,
+};
+
+const mostLikesBlog = {
+  title: 'Canonical string reduction',
+  author: 'Edsger W. Dijkstra',
+  likes: 12,
+};
+
+module.exports = {
+  blogs,
+  listWithOneBlog,
+  likesIsWrongTypeBlog,
+  testBlog,
+  mostLikesBlog,
+};
