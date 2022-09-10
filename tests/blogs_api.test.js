@@ -66,6 +66,15 @@ test('when likes are not given returns zero', async () => {
   expect(blogsAtEnd).toHaveLength(initialBlogs.length + 1);
 });
 
+test('when title and url are missing returns bad request', async () => {
+  const brokenBlog = {
+    author: 'tester x',
+    likes: 21,
+  };
+
+  await api.post('/api/blogs').send(brokenBlog).expect(400);
+});
+
 afterAll(() => {
   mongoose.connection.close();
 });

@@ -7,8 +7,13 @@ blogsRouter.get('/', async (request, response) => {
 });
 
 blogsRouter.post('/', async (request, response) => {
-  if (!request.body.likes) {
+  let body = request.body;
+  if (!body.likes) {
     request.body.likes = 0;
+  }
+  if (!body.title && !body.url) {
+    response.status(400).end();
+    return;
   }
 
   const blog = new Blog(request.body);
