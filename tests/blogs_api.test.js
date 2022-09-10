@@ -19,6 +19,14 @@ test('all blogs are returned and as json', async () => {
   expect(res.body).toHaveLength(initialBlogs.length);
 });
 
+// prettier-ignore
+test('blog\'s identifier name is id', async () => {
+  const response = await api.get('/api/blogs');
+  response.body.map((blog) => {
+    expect(blog.id).toBeDefined();
+  });
+});
+
 afterAll(() => {
   mongoose.connection.close();
 });
