@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const supertest = require('supertest');
 const app = require('../app');
 const api = supertest(app);
-const { initialBlogs } = require('./test_helper');
+const { initialBlogs, blogsInDb } = require('./test_helper');
 const Blog = require('../models/blog');
 
 beforeEach(async () => {
@@ -25,6 +25,26 @@ test('blog\'s identifier name is id', async () => {
   response.body.map((blog) => {
     expect(blog.id).toBeDefined();
   });
+});
+
+test('a valid blog can be added', async () => {
+  const newBlog = {
+    title: 'new blog adding test',
+    author: 'tester x',
+    url: 'www.test.com',
+    likes: 21,
+  };
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(201)
+    .expect('Content-Type', /application\/json/);
+
+  const blogsAtEnd = await blogsInDb();
+  expect(blogsAtEnd).toHaveLength(initialBlogs.length + 1);
+
+  const title = blogsAtEnd.map((b) => b.title);
+  expect(title).toContain('new blog adding test');
 });
 
 afterAll(() => {
