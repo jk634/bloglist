@@ -7,9 +7,20 @@ usersRouter.get('/', async (request, response) => {
   response.json(users);
 });
 
-usersRouter.post('/', async (request, response) => {
-  console.log(request.body);
+usersRouter.post('/', async (request, response, next) => {
   const { username, name, password } = request.body;
+
+  const existingUser = await User.findOne({ username });
+
+  if (existingUser) {
+    return response.status(400).json({
+      error: 'username must be unique',
+    });
+  }
+
+  if (password.length < 3) {
+    return response.status(400).json({ error: 'too short password' });
+  }
 
   const saltRounds = 10;
   const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -20,9 +31,12 @@ usersRouter.post('/', async (request, response) => {
     passwordHash,
   });
 
-  const savedUser = await user.save();
-
-  response.status(201).json(savedUser);
+  const savedUser = await user.save().catch((error) => {
+    next(error);
+  });
+  if (savedUser) {
+    response.status(201).json(savedUser);
+  }
 });
 
 module.exports = usersRouter;

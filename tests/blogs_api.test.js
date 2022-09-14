@@ -2,8 +2,10 @@ const mongoose = require('mongoose');
 const supertest = require('supertest');
 const app = require('../app');
 const api = supertest(app);
-const { initialBlogs, blogsInDb } = require('./test_helper');
+const { initialBlogs, blogsInDb, usersInDb } = require('./test_helper');
+const bcrypt = require('bcryptjs');
 const Blog = require('../models/blog');
+const User = require('../models/user');
 
 beforeEach(async () => {
   await Blog.deleteMany({});
@@ -102,6 +104,39 @@ test('a specific blog can be updated', async () => {
   const result = await api.put(`/api/blogs/${updatedBlog.id}`).expect(200);
 
   expect(blogToUpdate.likes).toBe(result.body.likes + 10);
+});
+
+describe('when there is initially one user at db', () => {
+  beforeEach(async () => {
+    await User.deleteMany({});
+
+    const passwordHash = await bcrypt.hash('sekret', 10);
+    const user = new User({ username: 'root', passwordHash });
+
+    await user.save();
+  });
+
+  test('creation fails with proper statuscode and message if username already taken', async () => {
+    const usersAtStart = await usersInDb();
+    console.log(usersAtStart);
+
+    const newUser = {
+      username: 'root',
+      name: 'Superuser',
+      password: 'salainen',
+    };
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(400)
+      .expect('Content-Type', /application\/json/);
+
+    expect(result.body.error).toContain('username must be unique');
+
+    const usersAtEnd = await usersInDb();
+    expect(usersAtEnd).toHaveLength(usersAtStart.length);
+  });
 });
 
 afterAll(() => {
