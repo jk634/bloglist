@@ -1,5 +1,9 @@
 const Blog = require('../models/blog');
 const User = require('../models/user');
+const bcrypt = require('bcryptjs');
+const supertest = require('supertest');
+const app = require('../app');
+const api = supertest(app);
 
 const initialBlogs = [
   {
@@ -16,6 +20,32 @@ const initialBlogs = [
   },
 ];
 
+const newBlog = {
+  title: 'new blog adding test',
+  author: 'tester x',
+  url: 'www.test.com',
+  likes: 21,
+};
+
+const usersInitialization = async () => {
+  await User.deleteMany({});
+
+  const passwordHash = await bcrypt.hash('salasana', 10);
+  const user = new User({ username: 'root', passwordHash });
+
+  await user.save();
+};
+
+const rootToken = async () => {
+  const loginRes = await api
+    .post('/api/login')
+    .send({ username: 'root', password: 'salasana' })
+    .expect(200)
+    .expect('Content-Type', /application\/json/);
+
+  return loginRes.body.token;
+};
+
 const blogsInDb = async () => {
   const blogs = await Blog.find({});
   return blogs.map((blog) => blog.toJSON());
@@ -30,4 +60,7 @@ module.exports = {
   initialBlogs,
   blogsInDb,
   usersInDb,
+  usersInitialization,
+  rootToken,
+  newBlog,
 };
