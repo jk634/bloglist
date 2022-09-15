@@ -2,14 +2,20 @@ const mongoose = require('mongoose');
 const supertest = require('supertest');
 const app = require('../app');
 const api = supertest(app);
-const { initialBlogs, blogsInDb, usersInDb } = require('./test_helper');
-const bcrypt = require('bcryptjs');
+const {
+  initialBlogs,
+  blogsInDb,
+  usersInDb,
+  usersInitialization,
+  rootToken,
+  newBlog,
+} = require('./test_helper');
 const Blog = require('../models/blog');
-const User = require('../models/user');
 
 beforeEach(async () => {
   await Blog.deleteMany({});
   await Blog.insertMany(initialBlogs);
+  await usersInitialization();
 });
 
 test('all blogs are returned and as json', async () => {
@@ -30,14 +36,9 @@ test('blog\'s identifier name is id', async () => {
 });
 
 test('a valid blog can be added', async () => {
-  const newBlog = {
-    title: 'new blog adding test',
-    author: 'tester x',
-    url: 'www.test.com',
-    likes: 21,
-  };
   await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${await rootToken()}`)
     .send(newBlog)
     .expect(201)
     .expect('Content-Type', /application\/json/);
@@ -49,6 +50,15 @@ test('a valid blog can be added', async () => {
   expect(title).toContain('new blog adding test');
 });
 
+// prettier-ignore
+test('a blog can\'t be added if token isn\'t given', async () => {
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(401)
+    .expect('Content-Type', /application\/json/);
+});
+
 test('when likes are not given returns zero', async () => {
   const newBlogNoLikes = {
     title: 'without likes',
@@ -58,6 +68,7 @@ test('when likes are not given returns zero', async () => {
 
   const result = await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${await rootToken()}`)
     .send(newBlogNoLikes)
     .expect(201)
     .expect('Content-Type', /application\/json/);
@@ -78,14 +89,24 @@ test('when title and url are missing returns bad request', async () => {
 });
 
 test('a blog can be deleted', async () => {
-  const blogsAtStart = await blogsInDb();
-  const blogToDelete = blogsAtStart[0];
+  await api
+    .post('/api/blogs')
+    .set('Authorization', `Bearer ${await rootToken()}`)
+    .send(newBlog)
+    .expect(201)
+    .expect('Content-Type', /application\/json/);
 
-  await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204);
+  const blogs = await blogsInDb();
+  const blogToDelete = blogs[2];
+
+  await api
+    .delete(`/api/blogs/${blogToDelete.id}`)
+    .set('Authorization', `Bearer ${await rootToken()}`)
+    .expect(204);
 
   const blogsAtEnd = await blogsInDb();
 
-  expect(blogsAtEnd).toHaveLength(initialBlogs.length - 1);
+  expect(blogsAtEnd).toHaveLength(initialBlogs.length);
 
   const titles = blogsAtEnd.map((b) => b.title);
 
@@ -96,10 +117,8 @@ test('a specific blog can be updated', async () => {
   const blogs = await blogsInDb();
   const blogToUpdate = blogs[0];
 
-  console.log(blogToUpdate);
   const updatedBlog = blogToUpdate;
   updatedBlog.likes += 10;
-  console.log(updatedBlog);
 
   const result = await api.put(`/api/blogs/${updatedBlog.id}`).expect(200);
 
@@ -108,17 +127,11 @@ test('a specific blog can be updated', async () => {
 
 describe('when there is initially one user at db', () => {
   beforeEach(async () => {
-    await User.deleteMany({});
-
-    const passwordHash = await bcrypt.hash('sekret', 10);
-    const user = new User({ username: 'root', passwordHash });
-
-    await user.save();
+    await usersInitialization();
   });
 
   test('creation fails with proper statuscode and message if username already taken', async () => {
     const usersAtStart = await usersInDb();
-    console.log(usersAtStart);
 
     const newUser = {
       username: 'root',
